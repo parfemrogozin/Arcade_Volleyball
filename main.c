@@ -142,11 +142,11 @@ void control_player(Sprite *sprites)
   const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
 
   /* PLAYER 1 */
-  if (keyboard_state[SDL_SCANCODE_LEFT])
+  if (keyboard_state[SDL_SCANCODE_A])
   {
     sprites[PLAYER1].d.x = -step;
   }
-  else if (keyboard_state[SDL_SCANCODE_RIGHT])
+  else if (keyboard_state[SDL_SCANCODE_D])
   {
     sprites[PLAYER1].d.x = step;
   }
@@ -155,20 +155,20 @@ void control_player(Sprite *sprites)
     sprites[PLAYER1].d.x = 0;
   }
 
-  if (keyboard_state[SDL_SCANCODE_UP])
+  if (keyboard_state[SDL_SCANCODE_W])
   {
     if (sprites[PLAYER1].dstrect.y == WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT) /* IS standing on the ground */
     {
-      sprites[PLAYER1].d.y-=jump;
+      sprites[PLAYER1].d.y -= jump;
     }
   }
 
   /* PLAYER 2 */
-  if (keyboard_state[SDL_SCANCODE_A])
+  if (keyboard_state[SDL_SCANCODE_LEFT])
   {
     sprites[PLAYER2].d.x = -step;
   }
-  else if (keyboard_state[SDL_SCANCODE_D])
+  else if (keyboard_state[SDL_SCANCODE_RIGHT])
   {
     sprites[PLAYER2].d.x = step;
   }
@@ -177,11 +177,11 @@ void control_player(Sprite *sprites)
     sprites[PLAYER2].d.x = 0;
   }
 
-  if (keyboard_state[SDL_SCANCODE_W])
+  if (keyboard_state[SDL_SCANCODE_UP])
   {
     if (sprites[PLAYER2].dstrect.y == WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT) /* IS standing on the ground */
     {
-      sprites[PLAYER2].d.y -= jump;
+      sprites[PLAYER2].d.y-=jump;
     }
   }
 
