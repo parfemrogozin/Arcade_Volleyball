@@ -1,16 +1,18 @@
 #include <SDL2/SDL.h>
-#include <unistd.h>
 
-const Uint32 ONEFRAME = 1000/25*3;
-const int CGA_WIDTH = 640;
-const int CGA_HEIGHT = 480;
+const Uint32 ANIMATION_FRAME_TIME = 1000/25*3;
+const int WINDOW_WIDTH = 640;
+const int WINDOW_HEIGHT = 480;
 const int FRAME_INIT_X = 0;
 const int FRAME_INIT_Y = 0;
-const int FRAME_WIDTH = 60;
-const int FRAME_HEIGHT = 60;
+const int ANIMATION_FRAME_WIDTH = 60;
+const int ANIMATION_FRAME_HEIGHT = 60;
 int ENDTURN = 0;
 
 
+/** Names of sprites
+* Names for array indexes to simulate associative array
+*/
 enum Actors
 {
   BALL = 0,
@@ -19,14 +21,17 @@ enum Actors
   NET = 3
 };
 
+/** Sprite
+* Holds all informations about sprite.
+*/
 struct Sprite
 {
-  SDL_Rect srcrect;
-  SDL_Rect dstrect;
+  SDL_Rect srcrect; /**< current animation frame from sprite sheet */
+  SDL_Rect dstrect; /**< where to render sprite */
   SDL_Texture *texture;
-  SDL_Point d;
-  double angle;
-  Uint32 lastframe;
+  SDL_Point d; /**< change in position to apply */
+  double angle; /**< rotation to apply, used only by BALL */
+  Uint32 last_anim_frame_change; /**< time of last change of animation frame*/
 };
 typedef struct Sprite Sprite;
 
@@ -37,13 +42,13 @@ Sprite load_sprite(SDL_Renderer *renderer, const char *filename)
   sprite.texture = SDL_CreateTextureFromSurface(renderer, surface);
   SDL_FreeSurface(surface);
   SDL_SetTextureBlendMode(sprite.texture, SDL_BLENDMODE_BLEND);
-  sprite.lastframe = ONEFRAME;
+  sprite.last_anim_frame_change = ANIMATION_FRAME_TIME;
   sprite.srcrect.x = FRAME_INIT_X;
   sprite.srcrect.y = FRAME_INIT_Y;
-  sprite.srcrect.w = FRAME_WIDTH;
-  sprite.srcrect.h = FRAME_HEIGHT;
-  sprite.dstrect.w = FRAME_WIDTH;
-  sprite.dstrect.h = FRAME_HEIGHT;
+  sprite.srcrect.w = ANIMATION_FRAME_WIDTH;
+  sprite.srcrect.h = ANIMATION_FRAME_HEIGHT;
+  sprite.dstrect.w = ANIMATION_FRAME_WIDTH;
+  sprite.dstrect.h = ANIMATION_FRAME_HEIGHT;
   sprite.d.x = 0;
   sprite.d.y = 0;
   sprite.angle = 0;
@@ -58,15 +63,15 @@ void load_sprites(SDL_Renderer *renderer, Sprite *sprite)
   sprite[NET] = load_sprite(renderer, "net.bmp");
 
 
-  sprite[PLAYER1].dstrect.y = CGA_HEIGHT - FRAME_HEIGHT;
-  sprite[PLAYER2].dstrect.y = CGA_HEIGHT - FRAME_HEIGHT;
+  sprite[PLAYER1].dstrect.y = WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT;
+  sprite[PLAYER2].dstrect.y = WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT;
 
   sprite[NET].srcrect.x = 0;
   sprite[NET].srcrect.y = 0;
   sprite[NET].srcrect.w = 10;
   sprite[NET].srcrect.h = 200;
-  sprite[NET].dstrect.x = CGA_WIDTH / 2 - sprite[NET].srcrect.w / 2;
-  sprite[NET].dstrect.y = CGA_HEIGHT - sprite[NET].srcrect.h;
+  sprite[NET].dstrect.x = WINDOW_WIDTH / 2 - sprite[NET].srcrect.w / 2;
+  sprite[NET].dstrect.y = WINDOW_HEIGHT - sprite[NET].srcrect.h;
   sprite[NET].dstrect.w = sprite[NET].srcrect.w;
   sprite[NET].dstrect.h = sprite[NET].srcrect.h;
 
@@ -114,13 +119,11 @@ SDL_bool process_events(unsigned int *is_npc)
       case SDL_KEYDOWN:
         if (event.key.keysym.sym == SDLK_F1)
         {
-          *is_npc = *is_npc ^ 1;
-          SDL_Log("NPC is %i", *is_npc);
+          *is_npc = *is_npc ^ 1; /* toggle first bit in numer for player 1, used in control_oponent */
         }
         if (event.key.keysym.sym == SDLK_F2)
         {
-          *is_npc = *is_npc ^ 2;
-          SDL_Log("NPC is %i", *is_npc);
+          *is_npc = *is_npc ^ 2; /* toggle second bit in numer for player 2, used in control_oponent */
         }
         return SDL_FALSE;
 
@@ -154,7 +157,7 @@ void control_player(Sprite *sprites)
 
   if (keyboard_state[SDL_SCANCODE_UP])
   {
-    if (sprites[PLAYER1].dstrect.y == CGA_HEIGHT - FRAME_HEIGHT) /* IS standing on the ground */
+    if (sprites[PLAYER1].dstrect.y == WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT) /* IS standing on the ground */
     {
       sprites[PLAYER1].d.y-=jump;
     }
@@ -176,7 +179,7 @@ void control_player(Sprite *sprites)
 
   if (keyboard_state[SDL_SCANCODE_W])
   {
-    if (sprites[PLAYER2].dstrect.y == CGA_HEIGHT - FRAME_HEIGHT) /* IS standing on the ground */
+    if (sprites[PLAYER2].dstrect.y == WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT) /* IS standing on the ground */
     {
       sprites[PLAYER2].d.y -= jump;
     }
@@ -194,11 +197,11 @@ void control_oponent(Sprite *sprites, unsigned int is_npc)
   float x_ratio;
   int npc;
 
-  if (sprites[BALL].dstrect.x > sprites[NET].dstrect.x && (is_npc == 2 || is_npc == 3))
+  if (sprites[BALL].dstrect.x > sprites[NET].dstrect.x && (is_npc == 2 || is_npc == 3)) /* binary 10 OR 11 */
   {
     npc = PLAYER2;
   }
-  else if (sprites[BALL].dstrect.x < sprites[NET].dstrect.x && (is_npc == 1 || is_npc == 3))
+  else if (sprites[BALL].dstrect.x < sprites[NET].dstrect.x && (is_npc == 1 || is_npc == 3)) /* binary 01 or 11 */
   {
     npc = PLAYER1;
   }
@@ -207,9 +210,9 @@ void control_oponent(Sprite *sprites, unsigned int is_npc)
   return;
   }
   x_diff = sprites[BALL].dstrect.x - sprites[npc].dstrect.x;
-  x_ratio = (float) x_diff / 55; /* 1.0..-1.0 player left positive, player right negative*/
-  /* go forward or backward if not uder ball */
-  if (x_ratio < -1)
+  x_ratio = (float) x_diff / 55; /**< 1.0..-1.0 player left positive, player right negative*/
+
+  if (x_ratio < -1) /* go forward or backward if not uder ball */
   {
     sprites[npc].d.x = -step;
   }
@@ -217,12 +220,12 @@ void control_oponent(Sprite *sprites, unsigned int is_npc)
   {
     sprites[npc].d.x = step;
   }
-  /* if under ball */
-  else
+
+  else /* if under ball */
   {
     sprites[npc].d.x = 0;
-    /* if just in the center of ball, step sideways to avoid 90 degree ball movement */
-    if (x_ratio == 0) /* TEMP instead of rand */
+
+    if (x_ratio == 0) /* if just in the center of ball, step sideways to avoid 90 degree ball movement */
     {
       if(SDL_GetTicks() % 2 == 0)
       {
@@ -233,8 +236,8 @@ void control_oponent(Sprite *sprites, unsigned int is_npc)
         sprites[npc].d.x = -step;
       }
     }
-    /* if ball close enough, jump */
-    if (sprites[BALL].dstrect.y >  max_jump && sprites[npc].dstrect.y == CGA_HEIGHT - FRAME_HEIGHT)
+
+    if (sprites[BALL].dstrect.y >  max_jump && sprites[npc].dstrect.y == WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT) /* if ball close enough, jump */
     {
       sprites[npc].d.y -= jump;
     }
@@ -246,7 +249,7 @@ void apply_gravity(Sprite *sprites)
 {
   for (int i = BALL; i < PLAYER2+1; i++)
   {
-    if (sprites[i].dstrect.y < CGA_HEIGHT - sprites[i].dstrect.h)
+    if (sprites[i].dstrect.y < WINDOW_HEIGHT - sprites[i].dstrect.h)
     {
       sprites[i].d.y += 1;
     }
@@ -255,11 +258,11 @@ void apply_gravity(Sprite *sprites)
 
 int bounce_ball(Sprite *ball)
 {
-  if (ball->dstrect.y >= CGA_HEIGHT - ball->dstrect.h) /* hit GROUND*/
+  if (ball->dstrect.y >= WINDOW_HEIGHT - ball->dstrect.h) /* hit GROUND*/
   {
     ball->d.y = ball->d.y * -0.8;
     ball->d.x *= 0.8;
-    if (ball->dstrect.x > CGA_WIDTH / 2)
+    if (ball->dstrect.x > WINDOW_WIDTH / 2)
       {return PLAYER1;}
     else
       {return PLAYER2;}
@@ -270,7 +273,7 @@ int bounce_ball(Sprite *ball)
     ball->d.y = ball->d.y * -0.8;
   }
 
-  if (ball->dstrect.x >= CGA_WIDTH - ball->dstrect.w) /* hit RIGHT wall */
+  if (ball->dstrect.x >= WINDOW_WIDTH - ball->dstrect.w) /* hit RIGHT wall */
   {
     ball->d.x = ball->d.x * -0.8;
   }
@@ -293,7 +296,7 @@ void hit_ball(Sprite *sprites)
     {
       sprites[BALL].dstrect.y = sprites[i].dstrect.y - sprites[BALL].dstrect.h;
       x_diff = sprites[BALL].dstrect.x - sprites[i].dstrect.x;
-      x_ratio = (float) x_diff / 55; /* 1.0..-1.0 player left positive, player right negative*/
+      x_ratio = (float) x_diff / 55; /**< 1.0..-1.0 player left positive, player right negative*/
       if (sprites[BALL].d.y >= 0)
       {
         sprites[BALL].d.y = sprites[BALL].d.y * -0.8;
@@ -343,15 +346,15 @@ void animate_players(Sprite *sprites)
 
     /* animation col */
     SDL_bool moves_horizontaly = (sprites[i].d.x != 0);
-    if (SDL_TICKS_PASSED(SDL_GetTicks(), sprites[i].lastframe) && moves_horizontaly)
+    if (SDL_TICKS_PASSED(SDL_GetTicks(), sprites[i].last_anim_frame_change) && moves_horizontaly)
     {
-      if (sprites[i].srcrect.x < FRAME_WIDTH) {sprites[i].srcrect.x+=FRAME_WIDTH;}
+      if (sprites[i].srcrect.x < ANIMATION_FRAME_WIDTH) {sprites[i].srcrect.x+=ANIMATION_FRAME_WIDTH;}
       else {sprites[i].srcrect.x = FRAME_INIT_X;}
-      sprites[i].lastframe = SDL_GetTicks() + ONEFRAME;
+      sprites[i].last_anim_frame_change = SDL_GetTicks() + ANIMATION_FRAME_TIME;
     }
     else
     {
-      if (SDL_TICKS_PASSED(SDL_GetTicks(), sprites[i].lastframe))
+      if (SDL_TICKS_PASSED(SDL_GetTicks(), sprites[i].last_anim_frame_change))
       {
         sprites[i].srcrect.x = FRAME_INIT_X;
       }
@@ -382,14 +385,14 @@ void apply_delta(Sprite *sprites)
       sprites[i].dstrect.x = 0;
     }
 
-    if (sprites[i].dstrect.x > CGA_WIDTH - FRAME_WIDTH)
+    if (sprites[i].dstrect.x > WINDOW_WIDTH - ANIMATION_FRAME_WIDTH)
     {
-      sprites[i].dstrect.x = CGA_WIDTH - FRAME_WIDTH;
+      sprites[i].dstrect.x = WINDOW_WIDTH - ANIMATION_FRAME_WIDTH;
     }
 
-    if (sprites[i].dstrect.y >= CGA_HEIGHT - FRAME_HEIGHT) /* IS standing on the ground */
+    if (sprites[i].dstrect.y >= WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT) /* IS standing on the ground */
     {
-    sprites[i].dstrect.y = CGA_HEIGHT - FRAME_HEIGHT;
+    sprites[i].dstrect.y = WINDOW_HEIGHT - ANIMATION_FRAME_HEIGHT;
     }
 
     if (sprites[i].dstrect.y < 0) /*hit CEILING */
@@ -434,7 +437,7 @@ int main(int argc, char **argv)
   unsigned int score[3];
   unsigned int is_npc = 0;
 
-  score[BALL] = 0;
+  score[BALL] = 0; /**< last player who scored */
   score[PLAYER1] = 0;
   score[PLAYER2] = 0;
 
@@ -446,8 +449,8 @@ int main(int argc, char **argv)
     "Arcade Volleybal",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
-    CGA_WIDTH,
-    CGA_HEIGHT,
+    WINDOW_WIDTH,
+    WINDOW_HEIGHT,
     SDL_WINDOW_OPENGL);
 
 
@@ -460,7 +463,7 @@ int main(int argc, char **argv)
   load_sprites(renderer, sprites);
   place_sprites_on_start(sprites, PLAYER1);
 
-/* <-- MAIN LOOP */
+/* <-- GAME LOOP */
 
   int point = 0;
   Uint32 timeout = 0;
@@ -490,7 +493,7 @@ int main(int argc, char **argv)
       ENDTURN = 0;
     }
    }
-/* MAIN LOOP -->*/
+/* GAME LOOP -->*/
 
   for (int i = BALL; i < NET+1; i++)
   {
