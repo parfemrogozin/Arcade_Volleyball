@@ -39,9 +39,10 @@ Sprite load_sprite(SDL_Renderer *renderer, const char *filename)
 {
   Sprite sprite;
   SDL_Surface *surface = SDL_LoadBMP(filename);
+  SDL_SetColorKey(surface, SDL_TRUE, SDL_MapRGB(surface->format, 0, 0, 5));
   sprite.texture = SDL_CreateTextureFromSurface(renderer, surface);
   SDL_FreeSurface(surface);
-  SDL_SetTextureBlendMode(sprite.texture, SDL_BLENDMODE_BLEND);
+  /*SDL_SetTextureBlendMode(sprite.texture, SDL_BLENDMODE_BLEND);*/
   sprite.last_anim_frame_change = ANIMATION_FRAME_TIME;
   sprite.srcrect.x = FRAME_INIT_X;
   sprite.srcrect.y = FRAME_INIT_Y;
@@ -458,7 +459,7 @@ int main(int argc, char **argv)
     window,
     -1,
    SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
 
   load_sprites(renderer, sprites);
   place_sprites_on_start(sprites, PLAYER1);
